@@ -11,10 +11,16 @@ import React, {
   useImperativeHandle,
   useMemo,
 } from 'react';
-import { drawingState, derivedPaths } from '../../store';
+import {
+  drawingState,
+  derivedPaths,
+  CompletedPoints,
+  ID,
+  CurvesDump,
+} from '../../store';
 import { useSnapshot } from 'valtio';
 import { createHistoryStack, createSvgFromPaths } from '../../utils';
-import type { SketchCanvasRef, SketchCanvasProps, Point } from './types';
+import type { SketchCanvasRef, SketchCanvasProps } from './types';
 import { ImageFormat } from './types';
 import { STROKE_COLOR, STROKE_STYLE, STROKE_WIDTH } from './constants';
 
@@ -27,17 +33,15 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       containerStyle,
       children,
       topChildren,
+      onDraw,
+      onDelete,
     },
     ref
   ) => {
     const pathsSnapshot = useSnapshot(derivedPaths);
     const canvasRef = useCanvasRef();
-    const stack = useMemo(
-      () =>
-        createHistoryStack({
-          currentPoints: drawingState.currentPoints,
-          completedPoints: drawingState.completedPoints,
-        }),
+    const history = useMemo(
+      () => createHistoryStack(drawingState.completedPoints),
       []
     );
 
@@ -45,25 +49,54 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       drawingState.currentPoints.width = strokeWidth;
     }, [strokeWidth]);
 
+    const dispatchEvent = {
+      draw: (id: ID, curveData: CompletedPoints) => onDraw?.(id, curveData),
+
+      delete: (ids: number[]) => {
+        onDelete?.(ids);
+      },
+    };
+
     useImperativeHandle(ref, () => ({
       reset() {
         drawingState.currentPoints.points = null;
-        drawingState.completedPoints = [];
-        stack.push({
-          currentPoints: drawingState.currentPoints,
-          completedPoints: drawingState.completedPoints,
-        });
+
+        // .keys() returns an iterator, so we to convert it to an array
+        const deletedIDs = Array.from(drawingState.completedPoints.keys());
+
+        drawingState.completedPoints = new Map();
+        history.clear();
+
+        // Dispatch event
+        dispatchEvent.delete(deletedIDs);
       },
+
       undo() {
-        const value = stack.undo();
-        drawingState.currentPoints = value.currentPoints;
-        drawingState.completedPoints = value.completedPoints;
+        const id = history.undo();
+
+        if (id === undefined) return;
+
+        // drawingState.currentPoints = value.currentPoints;
+        drawingState.completedPoints.delete(id);
+        // React native does not listens to map/object updates
+        drawingState.completedPoints = new Map(drawingState.completedPoints);
+        // Dispatch event
+        dispatchEvent.delete([id]);
       },
+
       redo() {
-        const value = stack.redo();
-        drawingState.currentPoints = value.currentPoints;
-        drawingState.completedPoints = value.completedPoints;
+        const curve = history.redo();
+        if (curve === undefined) return;
+
+        // drawingState.currentPoints = value.currentPoints;
+        drawingState.completedPoints.set(...curve);
+        // React native does not listens to map/object updates
+        drawingState.completedPoints = new Map(drawingState.completedPoints);
+
+        // Dispatch event
+        dispatchEvent.draw(...curve);
       },
+
       toBase64: (format, quality) => {
         const image = canvasRef.current?.makeImageSnapshot();
         if (image) {
@@ -74,9 +107,11 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         }
         return undefined;
       },
+
       toImage: () => {
         return canvasRef.current?.makeImageSnapshot();
       },
+
       toSvg: (width, height, backgroundColor) => {
         return createSvgFromPaths(derivedPaths.completed, {
           width,
@@ -84,18 +119,14 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
           backgroundColor,
         });
       },
-      toPoints: () => {
-        return drawingState.completedPoints.map((p) => p.points);
-      },
-      addPoints: (points: Point[][]) => {
-        const formatted = points.map((data) => ({
-          id: Date.now(),
-          points: data,
-          color: STROKE_COLOR,
-          width: STROKE_WIDTH,
-          style: STROKE_STYLE,
-        }));
-        drawingState.completedPoints = formatted;
+
+      toPoints: () => Array.from(drawingState.completedPoints.entries()),
+
+      addPoints: (curves: CurvesDump) => {
+        drawingState.completedPoints = new Map([
+          ...drawingState.completedPoints,
+          ...curves,
+        ]);
       },
     }));
 
@@ -103,10 +134,24 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       {
         onStart: (touchInfo: TouchInfo) => {
           drawingState.isDrawing = true;
-          drawingState.currentPoints.points = [[touchInfo.x, touchInfo.y]];
+          drawingState.currentPoints = {
+            ...drawingState.currentPoints,
+            id: touchInfo.timestamp,
+            points: [[touchInfo.x, touchInfo.y]],
+          };
+
+          onDraw?.(touchInfo.timestamp, {
+            points: [[touchInfo.x, touchInfo.y]],
+            width: drawingState.currentPoints.width,
+            color: strokeColor,
+            style: strokeStyle,
+          });
         },
         onActive: (touchInfo: TouchInfo) => {
-          if (!drawingState.isDrawing) {
+          if (
+            !drawingState.isDrawing ||
+            drawingState.currentPoints.id === null
+          ) {
             return;
           }
 
@@ -114,30 +159,40 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
             ...(drawingState.currentPoints.points ?? []),
             [touchInfo.x, touchInfo.y],
           ];
+
+          onDraw?.(drawingState.currentPoints.id, {
+            points: drawingState.currentPoints.points,
+            width: drawingState.currentPoints.width,
+            color: strokeColor,
+            style: strokeStyle,
+          });
         },
-        onEnd: (touchInfo: TouchInfo) => {
+        onEnd: (_: TouchInfo) => {
           drawingState.isDrawing = false;
 
-          if (!drawingState.currentPoints.points) {
+          if (
+            !drawingState.currentPoints.points ||
+            drawingState.currentPoints.id === null
+          ) {
             return;
           }
 
-          drawingState.completedPoints = [
-            ...drawingState.completedPoints,
-            {
-              id: touchInfo.timestamp,
-              points: drawingState.currentPoints.points,
-              width: drawingState.currentPoints.width,
-              color: strokeColor,
-              style: strokeStyle,
-            },
-          ];
+          const curveData = {
+            points: drawingState.currentPoints.points,
+            width: drawingState.currentPoints.width,
+            color: strokeColor,
+            style: strokeStyle,
+          };
+
+          drawingState.completedPoints.set(
+            drawingState.currentPoints.id,
+            curveData
+          );
           drawingState.currentPoints.points = null;
 
-          stack.push({
-            currentPoints: drawingState.currentPoints,
-            completedPoints: drawingState.completedPoints,
-          });
+          history.push(drawingState.currentPoints.id, curveData);
+          // Dispatch event
+          onDraw?.(drawingState.currentPoints.id, curveData);
         },
       },
       [strokeColor, strokeStyle]

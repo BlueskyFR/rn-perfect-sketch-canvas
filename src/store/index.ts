@@ -7,22 +7,28 @@ import type {
 import { getSvgPathFromStroke } from '../utils';
 import { proxy } from 'valtio';
 import { derive } from 'valtio/utils';
+import { isDeclarationNode } from '@shopify/react-native-skia';
 
-interface CompletedPoints {
-  id: number;
+export type ID = number;
+
+export interface CompletedPoints {
   points: Point[];
   color: SketchCanvasProps['strokeColor'];
   width: SketchCanvasProps['strokeWidth'];
   style: SketchCanvasProps['strokeStyle'];
 }
 
+export type Curves = Map<ID, CompletedPoints>;
+export type CurvesDump = [ID, CompletedPoints][];
+
 export const drawingState = proxy({
   isDrawing: false,
-  currentPoints: { points: null, strokeWidth: STROKE_WIDTH } as {
+  currentPoints: { id: null, points: null, strokeWidth: STROKE_WIDTH } as {
+    id: number | null;
     points: Point[] | null;
     width?: SketchCanvasProps['strokeWidth'];
   },
-  completedPoints: [] as CompletedPoints[],
+  completedPoints: new Map() as Curves,
 });
 
 export const derivedPaths = derive({
@@ -34,16 +40,21 @@ export const derivedPaths = derive({
           })
         )
       : null,
-  completed: (get) =>
-    get(drawingState).completedPoints.map((point) => {
-      const { points, width, ...rest } = point;
-      return {
-        path: getSvgPathFromStroke(
-          getStroke(points, {
-            size: width,
-          })
-        ),
-        ...rest,
-      };
-    }),
+  completed: (get) => {
+    return Array.from(
+      get(drawingState).completedPoints.entries(),
+      ([id, curveData]) => {
+        const { points, width, ...rest } = curveData;
+        return {
+          path: getSvgPathFromStroke(
+            getStroke(points, {
+              size: width,
+            })
+          ),
+          id,
+          ...rest,
+        };
+      }
+    );
+  },
 });

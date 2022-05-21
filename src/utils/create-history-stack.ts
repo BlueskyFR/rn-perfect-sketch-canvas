@@ -1,29 +1,34 @@
-export default function createHistoryStack<T>(current: T) {
-  const stack = [current];
+import type { CompletedPoints, Curves, ID } from '../store';
+import { lastKeyInMap, lastValueInMap } from './map-utils';
 
-  let index = stack.length;
+export default function createHistoryStack(current: Curves) {
+  const history: Curves = new Map(current) ?? (new Map() as Curves);
+  const undoneCurves: Curves = new Map() as Curves;
 
-  function update() {
-    current = JSON.parse(JSON.stringify(stack[index - 1]));
+  function moveCurve(
+    from: Curves,
+    to: Curves
+  ): [ID, CompletedPoints] | undefined {
+    // Successive calls to lastKey/ValueInMap are way faster (~10x)
+    // than lastItemInMap alone
+    const id = lastKeyInMap(from);
+    const curveData = lastValueInMap(from);
 
-    return current;
+    if (!id || !curveData) return undefined;
+
+    to.set(id, curveData);
+    from.delete(id);
+
+    return [id, curveData];
   }
 
   return {
-    push: (value: T | ((payload: T) => T)) => {
-      stack.length = index;
-      // @ts-ignore: Value can be a function
-      stack[index++] = typeof value === 'function' ? value(current) : value;
-
-      return update();
+    push: (curveID: ID, completedPoints: CompletedPoints) => {
+      history.set(curveID, completedPoints);
     },
-    undo: () => {
-      if (index > 1) index -= 1;
-      return update();
-    },
-    redo: () => {
-      if (index < stack.length) index += 1;
-      return update();
-    },
+    undo: (): ID | undefined => moveCurve(history, undoneCurves)?.[0],
+    redo: (): [ID, CompletedPoints] | undefined =>
+      moveCurve(undoneCurves, history),
+    clear: () => history.clear(),
   };
 }
