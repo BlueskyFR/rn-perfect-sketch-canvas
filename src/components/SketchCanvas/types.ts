@@ -28,7 +28,7 @@ export interface SketchCanvasProps {
   containerStyle?: StyleProp<ViewStyle>;
   children?: React.ReactNode;
   topChildren?: React.ReactNode;
-  onDraw?: (id: ID, points: CompletedPoints) => void;
+  onDraw?: (id: ID, points: CompletedPoints, finished: boolean) => void;
   onDelete?: (ids: ID[]) => void;
 }
 

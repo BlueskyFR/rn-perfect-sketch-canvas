@@ -42,7 +42,9 @@ export default function App() {
             strokeWidth={snap.strokeWidth}
             ref={canvasRef}
             containerStyle={styles.container}
-            onDraw={(id, points) => console.log('onDraw', id, points)}
+            onDraw={(id, points, finished) =>
+              console.log('onDraw', id, points, finished)
+            }
             onDelete={(ids) => console.log('onDelete', ids)}
           />
         </View>

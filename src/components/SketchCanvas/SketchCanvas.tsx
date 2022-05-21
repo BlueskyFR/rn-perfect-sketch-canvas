@@ -82,7 +82,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         drawingState.completedPoints = new Map(drawingState.completedPoints);
 
         // Dispatch event
-        onDraw?.(...curve);
+        onDraw?.(...curve, true);
       },
 
       toBase64: (format, quality) => {
@@ -128,12 +128,16 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
             points: [[touchInfo.x, touchInfo.y]],
           };
 
-          onDraw?.(touchInfo.timestamp, {
-            points: [[touchInfo.x, touchInfo.y]],
-            width: drawingState.currentPoints.width,
-            color: strokeColor,
-            style: strokeStyle,
-          });
+          onDraw?.(
+            touchInfo.timestamp,
+            {
+              points: [[touchInfo.x, touchInfo.y]],
+              width: drawingState.currentPoints.width,
+              color: strokeColor,
+              style: strokeStyle,
+            },
+            false
+          );
         },
         onActive: (touchInfo: TouchInfo) => {
           if (
@@ -148,12 +152,16 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
             [touchInfo.x, touchInfo.y],
           ];
 
-          onDraw?.(drawingState.currentPoints.id, {
-            points: drawingState.currentPoints.points,
-            width: drawingState.currentPoints.width,
-            color: strokeColor,
-            style: strokeStyle,
-          });
+          onDraw?.(
+            drawingState.currentPoints.id,
+            {
+              points: drawingState.currentPoints.points,
+              width: drawingState.currentPoints.width,
+              color: strokeColor,
+              style: strokeStyle,
+            },
+            false
+          );
         },
         onEnd: (_: TouchInfo) => {
           drawingState.isDrawing = false;
@@ -180,7 +188,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
 
           history.push(drawingState.currentPoints.id, curveData);
           // Dispatch event
-          onDraw?.(drawingState.currentPoints.id, curveData);
+          onDraw?.(drawingState.currentPoints.id, curveData, true);
         },
       },
       [strokeColor, strokeStyle]
