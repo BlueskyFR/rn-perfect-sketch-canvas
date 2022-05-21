@@ -11,13 +11,7 @@ import React, {
   useImperativeHandle,
   useMemo,
 } from 'react';
-import {
-  drawingState,
-  derivedPaths,
-  CompletedPoints,
-  ID,
-  CurvesDump,
-} from '../../store';
+import { drawingState, derivedPaths, CurvesDump } from '../../store';
 import { useSnapshot } from 'valtio';
 import { createHistoryStack, createSvgFromPaths } from '../../utils';
 import type { SketchCanvasRef, SketchCanvasProps } from './types';
@@ -49,14 +43,6 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       drawingState.currentPoints.width = strokeWidth;
     }, [strokeWidth]);
 
-    const dispatchEvent = {
-      draw: (id: ID, curveData: CompletedPoints) => onDraw?.(id, curveData),
-
-      delete: (ids: number[]) => {
-        onDelete?.(ids);
-      },
-    };
-
     useImperativeHandle(ref, () => ({
       reset() {
         drawingState.currentPoints.points = null;
@@ -68,7 +54,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         history.clear();
 
         // Dispatch event
-        dispatchEvent.delete(deletedIDs);
+        onDelete?.(deletedIDs);
       },
 
       undo() {
@@ -81,7 +67,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         // React native does not listens to map/object updates
         drawingState.completedPoints = new Map(drawingState.completedPoints);
         // Dispatch event
-        dispatchEvent.delete([id]);
+        onDelete?.([id]);
       },
 
       redo() {
@@ -94,7 +80,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         drawingState.completedPoints = new Map(drawingState.completedPoints);
 
         // Dispatch event
-        dispatchEvent.draw(...curve);
+        onDraw?.(...curve);
       },
 
       toBase64: (format, quality) => {
