@@ -2,7 +2,7 @@ import type { CompletedPoints, Curves, ID } from '../store';
 import { lastKeyInMap, lastValueInMap } from './map-utils';
 
 export default function createHistoryStack(current: Curves) {
-  const history: Curves = new Map(current) ?? (new Map() as Curves);
+  const history: Curves = new Map(current);
   const undoneCurves: Curves = new Map() as Curves;
 
   function moveCurve(

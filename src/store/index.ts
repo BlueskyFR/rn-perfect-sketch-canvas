@@ -7,7 +7,6 @@ import type {
 import { getSvgPathFromStroke } from '../utils';
 import { proxy } from 'valtio';
 import { derive } from 'valtio/utils';
-import { isDeclarationNode } from '@shopify/react-native-skia';
 
 export type ID = number;
 

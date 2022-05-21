@@ -1,6 +1,6 @@
 import type { Color, SkImage } from '@shopify/react-native-skia';
 import type { StyleProp, ViewStyle } from 'react-native';
-import type { ID, CompletedPoints, Curves, CurvesDump } from '../../store';
+import type { ID, CompletedPoints, CurvesDump } from '../../store';
 
 export enum ImageFormat {
   PNG,

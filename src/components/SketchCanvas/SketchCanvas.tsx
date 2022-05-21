@@ -62,9 +62,10 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
 
         if (id === undefined) return;
 
-        // drawingState.currentPoints = value.currentPoints;
         drawingState.completedPoints.delete(id);
-        // React native does not listens to map/object updates
+        // React native does not listen to map/object updates,
+        // so we must recreate the map ;
+        // this is awful but I am not aware of a better method
         drawingState.completedPoints = new Map(drawingState.completedPoints);
         // Dispatch event
         onDelete?.([id]);
@@ -74,9 +75,10 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
         const curve = history.redo();
         if (curve === undefined) return;
 
-        // drawingState.currentPoints = value.currentPoints;
         drawingState.completedPoints.set(...curve);
-        // React native does not listens to map/object updates
+        // React native does not listen to map/object updates,
+        // so we must recreate the map ;
+        // this is awful but I am not aware of a better method
         drawingState.completedPoints = new Map(drawingState.completedPoints);
 
         // Dispatch event

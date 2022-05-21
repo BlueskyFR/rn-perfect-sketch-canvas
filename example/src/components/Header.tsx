@@ -1,7 +1,6 @@
 import React, { MutableRefObject } from 'react';
 import { Text, View, TouchableOpacity, StyleSheet } from 'react-native';
 import type { SketchCanvasRef } from 'rn-perfect-sketch-canvas';
-import type { CurvesDump } from 'src/store';
 import { state } from '../store';
 import Util from '../utils';
 
