@@ -11,7 +11,7 @@ import React, {
   useImperativeHandle,
   useMemo,
 } from 'react';
-import { drawingState, derivedPaths, CurvesDump } from '../../store';
+import { drawingState, derivedPaths, CurvesDump, ID } from '../../store';
 import { useSnapshot } from 'valtio';
 import { createHistoryStack, createSvgFromPaths } from '../../utils';
 import type { SketchCanvasRef, SketchCanvasProps } from './types';
@@ -115,6 +115,12 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
           ...drawingState.completedPoints,
           ...curves,
         ]);
+      },
+
+      delete: (ids: ID[]) => {
+        for (const id of ids) drawingState.completedPoints.delete(id);
+
+        drawingState.completedPoints = new Map(drawingState.completedPoints);
       },
     }));
 
