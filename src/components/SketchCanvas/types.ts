@@ -19,6 +19,7 @@ export interface SketchCanvasRef {
   toSvg: (width: number, height: number, backgroundColor?: string) => string;
   toPoints: () => CurvesDump;
   addPoints: (curves: CurvesDump) => void;
+  delete: (ids: ID[]) => void;
 }
 
 export interface SketchCanvasProps {
