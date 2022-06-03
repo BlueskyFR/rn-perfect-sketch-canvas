@@ -46,6 +46,7 @@ export default function App() {
               console.log('onDraw', id, points, finished)
             }
             onDelete={(ids) => console.log('onDelete', ids)}
+            readonly={true}
           />
         </View>
 

@@ -31,6 +31,7 @@ export interface SketchCanvasProps {
   topChildren?: React.ReactNode;
   onDraw?: (id: ID, points: CompletedPoints, finished: boolean) => void;
   onDelete?: (ids: ID[]) => void;
+  readonly?: boolean;
 }
 
 export type Point = [number, number];

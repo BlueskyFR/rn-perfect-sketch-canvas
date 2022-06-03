@@ -29,6 +29,7 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       topChildren,
       onDraw,
       onDelete,
+      readonly = false,
     },
     ref
   ) => {
@@ -45,6 +46,8 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
 
     useImperativeHandle(ref, () => ({
       reset() {
+        if (readonly) return;
+
         drawingState.currentPoints.points = null;
 
         // .keys() returns an iterator, so we to convert it to an array
@@ -58,6 +61,8 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       },
 
       undo() {
+        if (readonly) return;
+
         const id = history.undo();
 
         if (id === undefined) return;
@@ -72,6 +77,8 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
       },
 
       redo() {
+        if (readonly) return;
+
         const curve = history.redo();
         if (curve === undefined) return;
 
@@ -201,7 +208,11 @@ export const SketchCanvas = forwardRef<SketchCanvasRef, SketchCanvasProps>(
     );
 
     return (
-      <Canvas ref={canvasRef} onTouch={touchHandler} style={containerStyle}>
+      <Canvas
+        ref={canvasRef}
+        onTouch={readonly ? undefined : touchHandler}
+        style={containerStyle}
+      >
         {children}
         {pathsSnapshot.completed.map((path) => (
           <Path
